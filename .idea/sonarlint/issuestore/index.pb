@@ -5,3 +5,5 @@ J
 contracts/audit-trail.clar,b/6/b6671a06cd13e1dc7096347f063b75b96e221363
 I
 contracts/compliance.clar,e/f/ef2d9bb3aeb216b5716369e80f576a9d2c5cb2e0
+P
+ contracts/identity-provider.clar,7/4/748f7cc11c4a077faaa05d43dfb84e314c0de785
