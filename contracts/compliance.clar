@@ -1,30 +1,74 @@
+;; Compliance Contract
+;; Ensures adherence to jurisdictional requirements
 
-;; title: compliance
-;; version:
-;; summary:
-;; description:
+(define-map jurisdiction-rules
+  { jurisdiction-code: (string-utf8 10) }
+  {
+    min-age: uint,
+    required-fields: (list 10 (string-utf8 20)),
+    active: bool
+  })
 
-;; traits
-;;
+(define-map jurisdiction-approvers
+  { jurisdiction-code: (string-utf8 10) }
+  { approvers: (list 10 principal) })
 
-;; token definitions
-;;
+;; Error codes
+(define-constant err-unauthorized (err u400))
+(define-constant err-invalid-jurisdiction (err u401))
 
-;; constants
-;;
+;; Only admin can manage jurisdictions
+(define-data-var admin principal tx-sender)
 
-;; data vars
-;;
+;; Check if caller is admin
+(define-private (is-admin)
+  (is-eq tx-sender (var-get admin)))
 
-;; data maps
-;;
+;; Add or update jurisdiction rules
+(define-public (set-jurisdiction-rules
+                (jurisdiction-code (string-utf8 10))
+                (min-age uint)
+                (required-fields (list 10 (string-utf8 20)))
+                (active bool))
+  (begin
+    (asserts! (is-admin) err-unauthorized)
+    (ok (map-set jurisdiction-rules
+      { jurisdiction-code: jurisdiction-code }
+      {
+        min-age: min-age,
+        required-fields: required-fields,
+        active: active
+      }))))
 
-;; public functions
-;;
+;; Set approvers for a jurisdiction
+(define-public (set-jurisdiction-approvers
+                (jurisdiction-code (string-utf8 10))
+                (approvers (list 10 principal)))
+  (begin
+    (asserts! (is-admin) err-unauthorized)
+    (asserts! (is-some (map-get? jurisdiction-rules { jurisdiction-code: jurisdiction-code })) err-invalid-jurisdiction)
+    (ok (map-set jurisdiction-approvers
+      { jurisdiction-code: jurisdiction-code }
+      { approvers: approvers }))))
 
-;; read only functions
-;;
+;; Check if a jurisdiction is active
+(define-read-only (is-jurisdiction-active (jurisdiction-code (string-utf8 10)))
+  (match (map-get? jurisdiction-rules { jurisdiction-code: jurisdiction-code })
+    rules (get active rules)
+    false))
 
-;; private functions
-;;
+;; Get jurisdiction rules
+(define-read-only (get-jurisdiction-rules (jurisdiction-code (string-utf8 10)))
+  (map-get? jurisdiction-rules { jurisdiction-code: jurisdiction-code }))
 
+;; Check if principal is an approver for a jurisdiction
+(define-read-only (is-jurisdiction-approver (jurisdiction-code (string-utf8 10)) (approver principal))
+  (match (map-get? jurisdiction-approvers { jurisdiction-code: jurisdiction-code })
+    data (is-some (index-of (get approvers data) approver))
+    false))
+
+;; Transfer admin rights
+(define-public (transfer-admin (new-admin principal))
+  (begin
+    (asserts! (is-admin) err-unauthorized)
+    (ok (var-set admin new-admin))))
